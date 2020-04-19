@@ -174,10 +174,14 @@ class AiHandOver(APIView):
         return Response({})
 
 class ReleaseResource(APIView):
-    def get(self,request):
-        room = request.query_params.get("room")
-        room = GameRoom.objects.get(room_name=room)
-        room.delete()
+    def post(self,request):
+        room = request.data["room"]
+        print("releasing room = ",room)
+        try:
+            room = GameRoom.objects.get(room_name=room)
+            room.delete()
+        except:
+            pass
         return Response({})
         
 class Winner(APIView):
@@ -186,11 +190,14 @@ class Winner(APIView):
         loser = request.data["player2"]
         user = User.objects.get(email=winner)
         user.won += 1
+        user.played += 1
         user.save()
         user = User.objects.get(email=loser)
         loser.lost += 1
+        user.played += 1
         user.save()
         return Response({"status:true"})
+        
 def multiFriend(user):
     gameRoom = None
     try:

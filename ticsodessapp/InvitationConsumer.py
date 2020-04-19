@@ -4,7 +4,7 @@ import uuid
 
 class InvitationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print("Connecting... : ")
+        print("Connecting to invitation ")
         self.room_name = self.scope['url_route']['kwargs']['username']
         print("room_name = ",self.room_name)
         self.room_group_name = 'chat_%s' % self.room_name

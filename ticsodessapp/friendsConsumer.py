@@ -4,10 +4,8 @@ import uuid
 
 class FriendsStatus(AsyncWebsocketConsumer):
     async def connect(self):
-        print("Connecting... : ")
-        self.room_name = self.scope['url_route']['kwargs']['username']
-        print("room_name = ",self.room_name)
-        self.room_group_name = 'chat_%s' % self.room_name
+        print("Connecting to friends ")
+        self.room_group_name = "friends"
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -25,18 +23,34 @@ class FriendsStatus(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         print("text data = ",(text_data_json))
         user = text_data_json.get("user")
-        await self.channel_layer.group_send(
+        if text_data_json.get("status") == "online":
+            await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'sendOnlineStatus',
+                'type': 'sendBusyStatus',
                 'user': user
             }
         )
+        else:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'sendOnlineStatus',
+                    'user': user
+                }
+            )
        
 
     async def sendOnlineStatus(self, event):
         user = event["user"]
         await self.send(text_data=json.dumps({
             'refreshData': "true",
+            'user':user
+        }))
+
+    async def sendBusyStatus(self, event):
+        user = event["user"]
+        await self.send(text_data=json.dumps({
+            'busystatus': "yes",
             'user':user
         }))

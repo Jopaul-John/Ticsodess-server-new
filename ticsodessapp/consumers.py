@@ -6,7 +6,7 @@ import numpy as np
 
 class TicsodessConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print("Connecting... : ")
+        print("Connecting to gameroom ")
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'chat_%s' % self.room_name
 
@@ -29,7 +29,7 @@ class TicsodessConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         print("text data = ",(text_data_json))
         if text_data_json.get("firstPlayer"):
-            message = text_data_json["firstPlayer"]
+            message = text_data_json
             await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -92,11 +92,13 @@ class TicsodessConsumer(AsyncWebsocketConsumer):
                 'message': message
             }
         )
+            await self.disconnect(0)    
 
     async def firstPlayer(self, event):
         message = event['message']
         await self.send(text_data=json.dumps({
-            'firstPlayer': message
+            'firstPlayer': message["firstPlayer"],
+            "gamename": message["gamename"]
         }))
 
     async def makeMove(self, event):
