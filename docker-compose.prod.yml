@@ -32,8 +32,6 @@ services:
   redis:
     restart: always
     image: redis:latest
-    volumes:
-      - redis_data:/data
     expose:
       - "6379"
 
@@ -41,4 +39,3 @@ services:
 volumes:
   postgres_data:
   static_volume:
-  redis_data:
