@@ -1,6 +1,6 @@
 DEBUG=1
 SECRET_KEY=qera6u$qb$3j=s-@6ro4550)4&dcmn9y5_dlena8i+r@*ju&*g
-DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 * [::1]
 SQL_ENGINE=django.db.backends.postgresql
 SQL_DATABASE=postgres
 SQL_USER=postgres
@@ -8,3 +8,5 @@ SQL_PASSWORD=rootroot
 SQL_HOST=db
 SQL_PORT=5432
 DATABASE=postgres
+REDIS_HOST=redis
+REDIS_PORT=6379
