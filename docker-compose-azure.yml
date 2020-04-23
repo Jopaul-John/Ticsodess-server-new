@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ticsodess_server_project_web
+    image: revolutions.azurecr.io/ticsodess_server_project_web:latest
     command: gunicorn ticsodess_server_project.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - static_volume:/home/app/web/staticfiles
@@ -20,7 +20,7 @@ services:
     env_file:
       - ./.env.prod.db
   nginx:
-    image: ticsodess_server_project_ngnix
+    image: revolutions.azurecr.io/ticsodess_server_project_ngnix:latest
     volumes:
       - static_volume:/home/app/web/staticfiles
     ports:
