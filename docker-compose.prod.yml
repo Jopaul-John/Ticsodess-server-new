@@ -34,8 +34,12 @@ services:
     image: redis:latest
     expose:
       - "6379"
-
-
+  daphne:
+    build: .
+    command: daphne -b 0.0.0.0 -p 9000 ticsodess_server_project.asgi:application
+    depends_on:
+      - db
+      - redis
 volumes:
   postgres_data:
   static_volume:

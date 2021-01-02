@@ -140,6 +140,10 @@ def checkSubBoardWin(board,marker,last_move,board_list):
         board_list[math.floor(last_move / 9)] = -2
 
 def getAIMove(board,boardList,last_move,marker):
+    print("board = ", board)
+    print("board List = ", boardList)
+    print("Last Move = ", last_move)
+    print("Marker = ", marker)
     node = Node()
     t_end = time.time() + 3
     while time.time() < t_end:

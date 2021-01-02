@@ -37,6 +37,18 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    NOOB = "Noob"
+    INTERMEDIATE = "Intermediate"
+    PROFESSIONAL = "Professional"
+    MASTER = "Master"
+    JEDI = "Jedi"
+    LEVELS = [
+    (NOOB, 'NOOB'),
+    (INTERMEDIATE, 'INTERMEDIATE'),
+    (PROFESSIONAL, 'PROFESSIONAL'),
+    (MASTER, 'MASTER'),
+    (JEDI, 'JEDI'),
+    ]
     email = models.EmailField(_('email address'), unique=True)
     username = models.CharField(_('username'),max_length=61)
     first_name = models.CharField(_('first name'), max_length=30, blank=True)
@@ -49,6 +61,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_busy = models.BooleanField(default=False)
     imageUrl = models.URLField(blank=True,null=True)
     friends = models.ManyToManyField("self",blank=True)
+    isUsernameSet = models.BooleanField(default=False)
+    level = models.CharField(choices=LEVELS, max_length=15,default=NOOB)
+    points = models.IntegerField(default=0)
+    usernameUpdated = models.BooleanField(default=False)
     is_staff = models.BooleanField(
         'staff status',
         default=False,
@@ -113,3 +129,20 @@ class ChatGroup(models.Model):
 
     def __str__(self):
         return self.groupName
+
+class SocialLogin(models.Model):
+    user = models.ForeignKey(User, verbose_name=_("user"), on_delete=models.CASCADE)
+    email = models.EmailField(_('email address'), unique=True)
+    userID = models.CharField(max_length=50,blank=True,default="")
+    socialmedia = models.CharField(_("social media"), max_length=10)
+    accessToken = models.CharField(_("access token"), max_length=4096)
+
+    def __str__(self):
+        return self.user.username
+
+class Imag(models.Model):
+    user = models.ForeignKey(User, verbose_name=_("userimage"), default=None, on_delete=models.CASCADE)
+    file = models.ImageField(_("image"), upload_to="images/", height_field=None, width_field=None, max_length=None)
+    
+    def __str__(self):
+        return self.user.username

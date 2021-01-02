@@ -9,6 +9,8 @@ then
     done
 
     echo "PostgreSQL started"
+    python manage.py makemigrations
+    python manage.py migrate
+    python manage.py createuser
 fi
-
 exec "$@"

@@ -15,9 +15,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf.urls.static import static
+from ticsodess_server_project import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('ticsodess/', include('ticsodessapp.urls')),
     path('auth/', include('rest_framework_social_oauth2.urls')),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
