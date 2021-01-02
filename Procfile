@@ -1,1 +1,1 @@
-web: python manage.py runserver
+web: gunicorn ticsodess_server_project.wsgi
