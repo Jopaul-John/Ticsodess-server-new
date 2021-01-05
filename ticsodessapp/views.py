@@ -507,9 +507,9 @@ class UserStats(APIView):
         user = User.objects.get(email=username)
         try:
             opponentuser = User.objects.get(username=opponentName)
+            user.friends.add(opponentuser)
         except:
             pass
-        user.friends.add(opponentuser)
         user.played += 1
         user.is_busy = False
         if not points:
