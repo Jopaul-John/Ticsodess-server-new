@@ -30,4 +30,5 @@ urlpatterns = [
     url(r'^updateusername/$',views.UpdateUserName.as_view()),
     url(r'^stats/$',views.UserStats.as_view()),
     url(r'^shareimage/$',views.ShareImage.as_view()),
+    url(r'^privacy/$',views.privacyPolicy),
 ]

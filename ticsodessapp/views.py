@@ -543,3 +543,6 @@ class ShareImage(APIView):
         img.save(buffered, format="png")
         img_str = base64.b64encode(buffered.getvalue())
         return Response({"image": img_str})
+
+def privacyPolicy(request):
+    return render(request,"ticsodessapp/privacy.html")
