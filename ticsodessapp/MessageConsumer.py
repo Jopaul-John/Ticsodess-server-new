@@ -2,9 +2,12 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 import uuid
 
+"""  
+    Websocket class to alert user online/ busy stats
+    checks if either online or busy
+"""
 class MessageConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print("Connecting to friends ")
         self.room_group_name = "friends"
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -21,7 +24,6 @@ class MessageConsumer(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        print("text data = ",(text_data_json))
         user = text_data_json.get("user")
         if text_data_json.get("status") == "online":
             await self.channel_layer.group_send(

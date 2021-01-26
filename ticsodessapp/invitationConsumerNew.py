@@ -6,9 +6,13 @@ from asgiref.sync import sync_to_async
 from urllib.parse import urlparse
 
 class InvitationConsumerNew(AsyncWebsocketConsumer):
+    """  
+        sends the player movements and game updates
+        checks for the win/lose
+        send the board positions
+    """
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
-        print("room_name = ",self.room_name)
         self.room_group_name = 'chat_%s' % self.room_name
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -26,7 +30,6 @@ class InvitationConsumerNew(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        print("text data = ",(text_data_json))
         canStartGame = text_data_json.get("startGame")
         isMove = text_data_json.get("isMove")
         isExit = text_data_json.get("isexit")
@@ -90,10 +93,13 @@ def setUserOffline(userMail):
     user.save()
 
 class InvitationConsumerFriend(AsyncWebsocketConsumer):
+    """  
+        invites the user for invitations/rejections etc
+    """
     async def connect(self):
         user = self.scope["query_string"].decode("utf-8") 
-        print(type(user))
         import threading
+        # async to synch requires threading !
         t = threading.Thread(target=setUserOnline, args=[user])
         t.setDaemon(True)
         t.start()
@@ -107,7 +113,6 @@ class InvitationConsumerFriend(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         # Leave room group
         user = self.scope["query_string"].decode("utf-8") 
-        print(type(user))
         import threading
         t = threading.Thread(target=setUserOffline, args=[user])
         t.setDaemon(True)
@@ -120,7 +125,6 @@ class InvitationConsumerFriend(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        print("text data = ",(text_data_json))
         isInvitation = text_data_json.get("isinvitation")
         isStartGame = text_data_json.get("startGame")
         isrejected = text_data_json.get("invitationRejected")

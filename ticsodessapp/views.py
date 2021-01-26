@@ -19,266 +19,22 @@ from rest_framework.authtoken.models import Token
 import numpy as np
 from PIL import Image
 from PIL import ImageFont
-from PIL import ImageDraw 
+from PIL import ImageDraw
 from io import BytesIO
+from django.utils.crypto import get_random_string
 
-UnProhibitedNames = ["fuck", "suck", "dick", "cunt", "boob", "vagina", "ass", "anal", "sex", "bikini", "penis", "rectum", "nipple", "69", "whore", "bitch", "horny"]
-class UserImageView(APIView):
-    def post(self, request):
-        print("creating image", request.data)
-        user = User.objects.get(email=request.user)
-        user.imageUrl = request.data["imageUrl"]
-        user.save()
-        return Response({}, status=status.HTTP_201_CREATED)
-
-
-class UserFriends(APIView):
-    def get(self, request):
-        user = User.objects.get(email=request.user)
-        friends = FriendSerializer(user.friends.all(), many=True)
-        for friendData, friend in zip(friends.data, user.friends.all()):
-            friendData["image"] = str(base64.b64encode(
-                requests.get(friend.imageUrl).content))
-        return Response({"data": friends.data}, status=200)
-
-
-class UserProfileView(APIView):
-    serializer_class = UserSerializer
-
-    def get(self, request, format=None):
-        print(request.user)
-        user = User.objects.get(email=request.user)
-        user = UserSerializer([user], many=True)
-        if user:
-            return Response({"data": user.data}, status=200)
-        else:
-            return Response(False, status=200)
-
-    def post(self, request, format=None):
-        print("User = ", request.user)
-        user, created = User.objects.get_or_create(email=request.user)
-        if not created:
-            user.country = request.data['country_name']
-            user.place = request.data['place_name']
-            user.save()
-            user = UserSerializer([user], many=True)
-            print(user.data)
-            return Response({"data": user.data}, status=status.HTTP_201_CREATED)
-
-
-class GameRoomView(APIView):
-    serializer_class = GameRoomSerializer
-
-    def get(self, request, format=None):
-        _is_friend = False if request.query_params.get(
-            "is_friend_game") == "false" else True
-        if _is_friend:
-            player1 = request.query_params.get("player1")
-            player2 = request.query_params.get("player2")
-            print(player1, player2)
-            player1 = User.objects.get(email=player1)
-            player2 = User.objects.get(email=player2)
-            player1.is_busy = True
-            player1.save()
-            player2.is_busy = True
-            player2.save()
-            gameRoom = GameRoom.objects.create(room_name=str(
-                uuid.uuid4()), is_friend=True, is_full=True)
-            gameModel = Game_Model.objects.create(
-                room=gameRoom, player1=player1, player2=player2)
-            gameRoom = GameRoomSerializer([gameRoom], many=True)
-            return Response({"data": gameRoom.data}, status=status.HTTP_200_OK)
-        else:
-            user = User.objects.get(email=request.user)
-            gameRoom, gameModel = multiFriend(user)
-            print(gameRoom.data[0]["is_full"])
-            return Response({"data": gameRoom.data}, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        print("request data = ", request.data)
-        username = request.data["username"]
-        roomname = request.data["roomname"]
-        gameModel = Game_Model.objects.get(room__room_name=roomname)
-        if gameModel.first_player == "":
-            gameModel.first_player = username
-            gameModel.save()
-            gameModel = GameModelSerializer([gameModel], many=True)
-            return Response({"data": gameModel.data}, status=status.HTTP_200_OK)
-        else:
-            return Response({"data": "First Player is already choosed"}, status=status.HTTP_200_OK)
-
-
-class FriendView(APIView):
-
-    def get(self, request, format=None):
-        friend = request.query_params.get("friend")
-        print("friend = ", friend)
-        try:
-            friendmodel = User.objects.get(username=friend)
-            print("username = ", friendmodel.email)
-            friendmodelserializer = FriendSerializer([friendmodel], many=True)
-            friendmodelserializer.data[0]["image"] = str(base64.b64encode(
-                requests.get(friendmodel.imageUrl).content))
-            return Response({"data": friendmodelserializer.data}, status=200)
-        except Exception as e:
-            print(e)
-            friendmodel = None
-            return Response({'response': "Username not found"}, status=status.HTTP_200_OK)
-
-
-class GameModelView(APIView):
-    def post(self, request, format=None):
-        game_model = Game_Model.objects.get(room__room_name=request.room)
-        game_model.score_o = int(request.oscore)
-        game_model.score_x = int(request.xscore)
-        game_model.save()
-
-
-class AiView(APIView):
-    def get(self, request, format=None):
-        board = request.query_params.get("board")
-        move = request.query_params.get("move")
-        next_move = alphabetaPrune(board, "x", -1000, 1000, 0)[1]
-        return Response({'next_move': next_move}, status=status.HTTP_200_OK)
-
-
-class UserStatusView(APIView):
-    def post(self, request):
-        user = User.objects.get(email=request.user)
-        if request.data["status"] == "true":
-            user.is_online = True
-            user.save()
-            return Response({"user": "user is online now"})
-        else:
-            user.is_online = False
-            user.save()
-            return Response({"user": "user is offline now"})
-
-
-class BusyStatus(APIView):
-    def post(self, request):
-        user = User.objects.get(email=request.user)
-        if request.data["status"] == "true":
-            user.is_busy = True
-            user.save()
-            return Response({"user": "user is busy now"})
-        else:
-            user.is_busy = False
-            user.save()
-            return Response({"user": "user is not busy now"})
-
-
-class LogoutView(APIView):
-    def get(self, request, format=None):
-        request.user.auth_token.delete()
-        return Response(status=status.HTTP_200_OK)
-
-
-class AiHandOver(APIView):
-    def get(self, request):
-        room = request.query_params.get("room")
-        model = Game_Model.objects.get(room__room_name=room)
-        model.player1 = User.objects.get(username="botmon")
-        model.save()
-        return Response({})
-
-
-class ReleaseResource(APIView):
-    def post(self, request):
-        room = request.data["room"]
-        print("releasing room = ", room)
-        try:
-            room = GameRoom.objects.get(room_name=room)
-            room.delete()
-        except:
-            pass
-        return Response({})
-
-
-class Winner(APIView):
-    def post(self, request):
-        winner = request.data["player1"]
-        loser = request.data["player2"]
-        user = User.objects.get(email=winner)
-        user.won += 1
-        user.played += 1
-        user.save()
-        user = User.objects.get(email=loser)
-        loser.lost += 1
-        user.played += 1
-        user.save()
-        return Response({"status:true"})
-
-
-def multiFriend(user):
-    gameRoom = None
-    try:
-        with transaction.atomic():
-            user.is_busy = True
-            user.save()
-            gameRoom = GameRoom.objects.select_for_update().filter(
-                is_full=False, is_friend=False).earliest('id')
-            gameRoom.is_full = True
-            gameRoom.save()
-            gameModel = Game_Model.objects.get(room=gameRoom)
-            gameModel.player2 = user
-            gameModel.save()
-            gameRoom = GameRoomSerializer([gameRoom], many=True)
-            gameRoom.data[0]["creator"] = gameModel.player1.username
-            return gameRoom, gameModel
-    except:
-        gameRoom = GameRoom.objects.create(room_name=str(
-            uuid.uuid4()), is_friend=False, is_full=False)
-        bot = User.objects.get(username="botmon")
-        gameModel = Game_Model.objects.create(
-            room=gameRoom, player1=user, player2=bot)
-        gameModel.save()
-        gameRoom = GameRoomSerializer([gameRoom], many=True)
-        gameRoom.data[0]["creator"] = gameModel.player1.username
-    return gameRoom, gameModel
-
-
-def checkNewOnlinePlayer(user, gameRoom, gameModel, i):
-    try:
-        if i > 4:
-            print("checking number", i)
-            bot = User.objects.get(username="botmon")
-            gameRoom = GameRoom.objects.get(
-                room_name=gameRoom.data[0]["room_name"])
-            gameRoom.is_full = True
-            gameRoom.save()
-            gameRoom = GameRoomSerializer([gameRoom], many=True)
-            gameRoom.data[0]["creator"] = gameModel.player1.username
-            print(gameRoom.data, gameModel.room.room_name)
-            return gameRoom, gameModel
-        else:
-            time.sleep(0.5)
-            i += 1
-            print("incrementing i", i)
-            return checkNewOnlinePlayer(user, gameRoom, gameModel, i)
-    except Exception as e:
-        print(e)
-
-
-@authentication_classes([])
-@permission_classes([])
-class TempUser(APIView):
-
-    def get(self, request):
-        userName = str(uuid.uuid4())
-        email = userName + "@ticsodess.com"
-        password = str(uuid.uuid4())
-        userObject = User.objects.create(
-            email=email, username=userName, password=password)
-        token = Token.objects.create(user=userObject)
-        print(token)
-        user = UserSerializer(instance=userObject)
-        return Response({"data": user.data, "token": token.key})
-
-# here starts the new code
+""" 
+    Since kids are targeted, certain names are prohibited
+"""
+UnProhibitedNames = ["fuck", "suck", "dick", "cunt", "boob", "vagina", "ass", "anal",
+                     "sex", "bikini", "penis", "rectum", "nipple", "69", "whore", "bitch", "horny"]
 
 
 class ArtificialIntelligence(APIView):
+    """ 
+        get API calls from the client with lastmove, marker, board and boardlist(subboard list)
+        returns the best move with these params
+    """
 
     def get(self, request):
         board = np.fromstring(request.query_params.get(
@@ -292,13 +48,19 @@ class ArtificialIntelligence(APIView):
 
 
 class GameRoomViewNew(APIView):
+    """ 
+        user requests for a game room.
+        if there are free rooms, then a room is returned
+        else a room is created
+        parameter includes, isfriend and is full
+        returns gameroom data and game model
+     """
 
     def post(self, request):
         player = request.data["username"]
         isFriend = request.data["isfriend"]
         user = User.objects.get(username=player)
         gameRoom = GameRoom.objects.filter(is_full=False, is_friend=isFriend)
-        print("Gameroom = ", gameRoom)
         if len(gameRoom) == 0:
             botUser = User.objects.filter(email__contains="botmon@bot")[0]
             gameRoom = GameRoom.objects.create(
@@ -318,6 +80,14 @@ class GameRoomViewNew(APIView):
 
 
 class SwitchToBotPlayer(APIView):
+    """ 
+        switches opponent player to bot
+        there are cases where online players are less, hence user should not wait long enough
+        10 seconds waiting time is given, if there are no new users, the opponent swtiches to AI
+        Not mentioned to the user for better user experience  
+        returns game room data and a confirmation
+    """
+
     def post(self, request):
         confirmation = False
         roomName = request.data["gameRoom"]
@@ -331,11 +101,16 @@ class SwitchToBotPlayer(APIView):
 
 
 class TemperoryUser(APIView):
+    """ 
+        creates a temporary authentication for user 
+        returns user serialized data with a token
+    """
+
     authentication_classes = []
     permission_classes = []
 
     def post(self, request):
-        email = request.data["ipaddress"]
+        email = get_random_string(15)
         user = User.objects.get_or_create(email=email + "@ticsodess.com",
                                           username=email, is_online=True)
         token = Token.objects.create(user=user[0])
@@ -344,16 +119,24 @@ class TemperoryUser(APIView):
 
 
 class Friends(APIView):
+    """ 
+        finds and returns the current user friends
+    """
+
     def get(self, request):
         userMail = request.query_params.get("userMail")
         user = User.objects.get(username=userMail)
         friends = list(user.friends.all())
-        print(friends)
         friendsSerilaized = FriendSerializer(friends, many=True)
         return Response({"data": friendsSerilaized.data})
 
 
 class FriendSearch(APIView):
+    """ 
+        search for a specific friend for "friend game"
+        returns the user / error messages
+    """
+
     def get(self, request):
         userMail = request.query_params.get("userMail")
         try:
@@ -370,6 +153,12 @@ class FriendSearch(APIView):
 
 
 class FriendRoom(APIView):
+    """ 
+        creates a room specfic for friend game
+        so that room is not used for random/ ai games
+        returns room data
+    """
+
     def get(self, request):
         user = User.objects.get(email=request.user)
         gameRoom = GameRoom.objects.create(
@@ -381,6 +170,12 @@ class FriendRoom(APIView):
 
 
 class JoinFriend(APIView):
+    """ 
+        friend is joined in the current room
+        room is marked as full, so noone else joins the room
+        returns a message to start the game and game model data
+    """
+
     def get(self, request):
         userMail = request.query_params.get("username")  # mail name actually
         roomName = request.query_params.get("roomName")
@@ -396,27 +191,36 @@ class JoinFriend(APIView):
 
 
 class UserDetails(APIView):
+    """
+        returns the user stats
+    """
 
     def get(self, request):
-        print(request.user)
         user = User.objects.get(email=request.user)
         userserialized = UserSerializer(user)
         return Response({"data": userserialized.data})
 
 
 class SocialLoginView(APIView):
-    
+    """ 
+       social authentication method
+       google and fb are used RN.
+       gets the user profile pic and email
+       saves in the social user model
+       returns the new user model containing the new DP and email  
+    """
+
     def post(self, request):
         userMail = None
         userImage = None
         accessToken = request.data.get("acesstoken")
-        print(request.data)
         userid = request.data["userID"]
         if not accessToken:
-            return Response({"data" : "No access token were found!"})
+            return Response({"data": "No access token were found!"})
         if request.data["backend"] == "facebook":
             userMail = request.user
-            data = requests.get("https://graph.facebook.com/v8.0/" + userid + "/picture")
+            data = requests.get(
+                "https://graph.facebook.com/v8.0/" + userid + "/picture")
             userImage = data.url
         elif request.data["backend"] == "google":
             userMail = request.data["email"]
@@ -425,7 +229,7 @@ class SocialLoginView(APIView):
             user = User.objects.get(email=request.user)
         else:
             user = User.objects.create(email=userMail)
-        
+
         user.usernameUpdated = False
         user.imageUrl = userImage
         user.email = userMail
@@ -439,11 +243,15 @@ class SocialLoginView(APIView):
         socialUser.accessToken = accessToken
         socialUser.save()
         userserialized = UserSerializer(user)
-        return Response({'data':userserialized.data})
+        return Response({'data': userserialized.data})
+
 
 class BusyView(APIView):
+    """ 
+        checks if the user is busy, blocks the game request
+    """
+
     def get(self, request):
-        print("in busy view", request.query_params.get("isbusy"))
         user = User.objects.get(email=request.user)
         if request.query_params.get("isbusy") == "true":
             user.is_busy = True
@@ -452,16 +260,21 @@ class BusyView(APIView):
         user.save()
         return Response({"user": "user is not busy now"})
 
+
 class UpdateStatsAndRelease(APIView):
+    """ 
+        update the user stats and busy stats are negated
+    """
+
     def post(self, request):
         user = User.objects.get(email=request.user)
         try:
             opponent = User.objects.get(email=request.data["opponent"])
             user.friends.add(opponent)
         except:
-            print("No user with email ", request.data["opponent"])
+            return Response({"No user name"})
         user.points += int(request.data["points"])
-        user.played += 1 
+        user.played += 1
         user.won += int(request.data["won"])
         user.lost += int(request.data["lost"])
         user.is_busy = False
@@ -469,7 +282,11 @@ class UpdateStatsAndRelease(APIView):
         userserialized = UserSerializer(user)
         return Response({"data": userserialized.data})
 
+
 class UpdateUserName(APIView):
+    """
+        User name is updated, just once
+    """
     def post(self, request):
         username = request.data["username"]
         user = None
@@ -488,12 +305,16 @@ class UpdateUserName(APIView):
         userserializer = UserSerializer(user)
         return Response({"data": userserializer.data})
 
+
 class UserStats(APIView):
-    def post (self, request):
+    """ 
+        updates user stats to boost points
+        adds the opponent to recently played
+    """
+    def post(self, request):
         username = request.user
         points = request.data.get("points")
         isWin = request.data["isWin"]
-        print(request.data)
         opponentName = request.data.get("opponent")
         if isWin == "true":
             isWin = True
@@ -522,27 +343,34 @@ class UserStats(APIView):
         else:
             if isWin:
                 user.won += 1
-                user.points += points 
+                user.points += points
             elif not isWin and not isDraw:
                 user.lost += 1
                 user.points += points
             else:
                 user.points += points
         user.save()
-        return Response({"message" : "Userdata updated"})
+        return Response({"message": "Userdata updated"})
+
 
 class ShareImage(APIView):
+    """ 
+        creates an image so user can share it in fb/social networks
+    """
     def get(self, request):
         username = request.data["Username"]
         level = request.data["level"]
         img = Image.open("../white.png")
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype("../agengsans.ttf", 72)
-        draw.text((900, 20),username + " have reached level " + level + " !!!",(200,200,200),font=font)
+        draw.text((900, 20), username + " have reached level " +
+                  level + " !!!", (200, 200, 200), font=font)
         buffered = BytesIO()
         img.save(buffered, format="png")
         img_str = base64.b64encode(buffered.getvalue())
         return Response({"image": img_str})
 
+
+# privacy policy 
 def privacyPolicy(request):
-    return render(request,"ticsodessapp/privacy.html")
+    return render(request, "ticsodessapp/privacy.html")

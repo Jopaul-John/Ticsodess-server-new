@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from ticsodessapp.models import User, GameRoom, Game_Model
 
+""" 
+    serialzes different model classes
+"""
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email','id','username','won','lost','played', 'points', 'level','usernameUpdated', "imageUrl"]
-        # extra_kwargs = {"password":{"write_only":True}}
 
 class GameRoomSerializer(serializers.ModelSerializer):
     class Meta:

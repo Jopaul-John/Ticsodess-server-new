@@ -1,2 +1,9 @@
 .pyc
 *.pycll
+env_db
+.env
+env_ticsodess
+env_ticsodess
+.env.prod
+.env.prod.db
+

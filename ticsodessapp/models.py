@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.base_user import AbstractBaseUser,BaseUserManager
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -9,6 +9,10 @@ from django.contrib.postgres.fields import ArrayField
 
 
 class UserManager(BaseUserManager):
+    """  
+        creates custom user manager
+        Authentication with token
+    """
     use_in_migrations = True
 
     def _create_user(self, email, password, **extra_fields):
@@ -27,30 +31,34 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password, **extra_fields):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_staff', True)
-        
+
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
-            
+
         return self._create_user(email, password, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """  
+        user model with different properties
+        importanr ones are email, levels, username, game stats,
+    """
     NOOB = "Noob"
     INTERMEDIATE = "Intermediate"
     PROFESSIONAL = "Professional"
     MASTER = "Master"
     JEDI = "Jedi"
     LEVELS = [
-    (NOOB, 'NOOB'),
-    (INTERMEDIATE, 'INTERMEDIATE'),
-    (PROFESSIONAL, 'PROFESSIONAL'),
-    (MASTER, 'MASTER'),
-    (JEDI, 'JEDI'),
+        (NOOB, 'NOOB'),
+        (INTERMEDIATE, 'INTERMEDIATE'),
+        (PROFESSIONAL, 'PROFESSIONAL'),
+        (MASTER, 'MASTER'),
+        (JEDI, 'JEDI'),
     ]
     email = models.EmailField(_('email address'), unique=True)
-    username = models.CharField(_('username'),max_length=61)
+    username = models.CharField(_('username'), max_length=61)
     first_name = models.CharField(_('first name'), max_length=30, blank=True)
     last_name = models.CharField(_('last name'), max_length=30, blank=True)
     date_joined = models.DateTimeField(_('date joined'), auto_now_add=True)
@@ -59,10 +67,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     lost = models.IntegerField(default=0)
     is_online = models.BooleanField(default=False)
     is_busy = models.BooleanField(default=False)
-    imageUrl = models.URLField(blank=True,null=True)
-    friends = models.ManyToManyField("self",blank=True)
+    imageUrl = models.URLField(blank=True, null=True)
+    friends = models.ManyToManyField("self", blank=True)
     isUsernameSet = models.BooleanField(default=False)
-    level = models.CharField(choices=LEVELS, max_length=15,default=NOOB)
+    level = models.CharField(choices=LEVELS, max_length=15, default=NOOB)
     points = models.IntegerField(default=0)
     usernameUpdated = models.BooleanField(default=False)
     is_staff = models.BooleanField(
@@ -94,7 +102,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.first_name
 
+
 class GameRoom(models.Model):
+    """  
+        gameroom with roomname , is full and is friend
+        is full is to check the room is full and proceed to play
+        is friend rooms are only for playing with friends
+    """
     room_name = models.CharField(max_length=100)
     is_friend = models.BooleanField(default=False)
     is_full = models.BooleanField(default=False)
@@ -104,16 +118,23 @@ class GameRoom(models.Model):
 
 
 class Game_Model(models.Model):
-    room = models.ForeignKey(GameRoom, default="",related_name='game_model',on_delete=models.CASCADE)
-    player1 = models.ForeignKey(User,on_delete=models.CASCADE,related_name='player_1',blank=True)
-    player2 = models.ForeignKey(User,on_delete=models.CASCADE,related_name='player_2',blank=True)
-    first_player = models.CharField(max_length=50,blank=True,default="")
-    movements = ArrayField(models.IntegerField(),blank=True,default=list)
-    winner = models.CharField(max_length=1,blank=True)
-    timestamp = models.DateTimeField(default=timezone.now, db_index=True,blank=True)
-    
+    """  
+        stores the game data like movements, time, and players involved
+    """
+    room = models.ForeignKey(
+        GameRoom, default="", related_name='game_model', on_delete=models.CASCADE)
+    player1 = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='player_1', blank=True)
+    player2 = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='player_2', blank=True)
+    first_player = models.CharField(max_length=50, blank=True, default="")
+    movements = ArrayField(models.IntegerField(), blank=True, default=list)
+    winner = models.CharField(max_length=1, blank=True)
+    timestamp = models.DateTimeField(
+        default=timezone.now, db_index=True, blank=True)
+
     def __str__(self):
-        return '%s  on %s' %(self.player1.username,format(self.timestamp))
+        return '%s  on %s' % (self.player1.username, format(self.timestamp))
 
     def __unicode__(self):
         return '[{timestamp}] {handle}: {message}'.format(**self.as_dict())
@@ -122,27 +143,32 @@ class Game_Model(models.Model):
     def formatted_timestamp(self):
         return format(self.timestamp)
 
-class ChatGroup(models.Model):
-    groupName = models.CharField(max_length=150)
-    creator = models.ForeignKey(User,on_delete=models.CASCADE,related_name="creator")
-    members = models.ManyToManyField(User,related_name="members")
 
-    def __str__(self):
-        return self.groupName
 
 class SocialLogin(models.Model):
-    user = models.ForeignKey(User, verbose_name=_("user"), on_delete=models.CASCADE)
+    """  
+        used to seperate the social login users
+        stores the access token for DP and other data 
+    """
+    user = models.ForeignKey(User, verbose_name=_(
+        "user"), on_delete=models.CASCADE)
     email = models.EmailField(_('email address'), unique=True)
-    userID = models.CharField(max_length=50,blank=True,default="")
+    userID = models.CharField(max_length=50, blank=True, default="")
     socialmedia = models.CharField(_("social media"), max_length=10)
     accessToken = models.CharField(_("access token"), max_length=4096)
 
     def __str__(self):
         return self.user.username
 
+
 class Imag(models.Model):
-    user = models.ForeignKey(User, verbose_name=_("userimage"), default=None, on_delete=models.CASCADE)
-    file = models.ImageField(_("image"), upload_to="images/", height_field=None, width_field=None, max_length=None)
-    
+    """  
+        stores different images for the user to share in social networks
+    """
+    user = models.ForeignKey(User, verbose_name=_(
+        "userimage"), default=None, on_delete=models.CASCADE)
+    file = models.ImageField(_("image"), upload_to="images/",
+                             height_field=None, width_field=None, max_length=None)
+
     def __str__(self):
         return self.user.username

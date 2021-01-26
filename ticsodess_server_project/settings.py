@@ -85,8 +85,8 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            # "hosts": [('127.0.0.1', 6379)], # for local
-            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379')] # for production
+            "hosts": [('127.0.0.1', 6379)], # for local
+            # "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379')] # for production
         },
     },
 }
@@ -106,8 +106,8 @@ DATABASES = {
 }
 
 # for heroku only
-db_from_env = dj_database_url.config()
-DATABASES['default'].update(db_from_env)
+# db_from_env = dj_database_url.config()
+# DATABASES['default'].update(db_from_env)
 
 
 # Password validation
@@ -175,13 +175,3 @@ AUTHENTICATION_BACKENDS = (
     'rest_framework_social_oauth2.backends.DjangoOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
-
-SOCIAL_AUTH_FACEBOOK_KEY = '1292246421113024'
-SOCIAL_AUTH_FACEBOOK_SECRET = '1dd9c3656303bd433aec4975511f20ef'
-
-# Define SOCIAL_AUTH_FACEBOOK_SCOPE to get extra permissions from Facebook.
-# Email is not sent by default, to get it, you must request the email permission.
-SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
-SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
-    'fields': 'id, name, email, public_profile'
-}
