@@ -19,7 +19,7 @@ A Django project that uses REST api, Websockets, PostgreSQL and Redis
 ### Results
 ![screen shot 1](images/achievements.webp "Screen shot 1")
 ![screen shot 2](images/gamepage.webp "Screen shot 2")
-![screen shot 3](images/gamepage2.webp "Screen shot 3")
+![screen shot 3](images/game.gif "Screen shot 3")
 ![screen shot 4](images/intropage.webp "Screen shot 4")
 
 
