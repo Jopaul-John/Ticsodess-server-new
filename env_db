@@ -1,3 +1,0 @@
-export POSTGRES_USER=postgres
-export POSTGRES_PASSWORD=rootroot
-export POSTGRES_DB=postgres
